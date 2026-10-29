@@ -808,7 +808,7 @@ class Individuation(QWidget):
 
         theme_combo = QComboBox()
         theme_combo.setFixedSize(115, 30)
-        theme_combo.addItems(["默认白框", "典雅木质"])
+        theme_combo.addItems(["默认白框"])
         theme_combo.currentTextChanged.connect(lambda text: self.theme_change(text))
         box_lst.append(theme_combo)
 
@@ -946,7 +946,7 @@ class Individuation(QWidget):
 
         theme_combo = QComboBox()
         theme_combo.setFixedSize(115, 30)
-        theme_combo.addItems(["默认白框", "典雅木质"])
+        theme_combo.addItems(["默认白框"])
         box_lst.append(theme_combo)
 
         theme_set.addSpacing(30)
