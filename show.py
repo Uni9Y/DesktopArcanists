@@ -1693,10 +1693,9 @@ class InteractiveGif(QWidget):
             sleep_5h_action = nonetime_menu.addAction('5h后')
             sleep_never_action = nonetime_menu.addAction('永不')
 
-            sleep_5s_action = nonetime_menu.addAction('5s后')
             sleep_actions = (sleep_5min_action, sleep_10min_action, sleep_30min_action, 
                             sleep_1h_action, sleep_2h_action, sleep_5h_action, 
-                            sleep_never_action, sleep_5s_action)
+                            sleep_never_action)
 
             for action in sleep_actions:
                 action.setCheckable(True)
@@ -1709,8 +1708,6 @@ class InteractiveGif(QWidget):
             sleep_2h_action.setChecked(self.sleep_time == 7200000)
             sleep_5h_action.setChecked(self.sleep_time == 18000000)
             sleep_never_action.setChecked(self.sleep_time == 0)
-
-            sleep_5s_action.setChecked(self.sleep_time == 5000)
 
             sleep_5min_action.triggered.connect(self.setSleepTime_5min)
             sleep_10min_action.triggered.connect(self.setSleepTime_10min)
