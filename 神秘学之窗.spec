@@ -21,7 +21,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='神秘学之窗',
+    name='神秘学小窗',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
