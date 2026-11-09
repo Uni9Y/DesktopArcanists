@@ -672,13 +672,14 @@ class Individuation(QWidget):
         title_group.setContentsMargins(0, 0, 0, 0)
         title_group.setSpacing(0)
 
-        self.title_dic = {'character':['|角色', '<br>Characters'], 
-                          'clock':['|时钟', '<br>Clock'], 
-                          'music':['|音乐', '<br>Music'],
-                          'operate':['|基础操作', '<br>Basic Operation'], 
-                          'update':['|更新日志', '<br>Update Log'], 
-                          'link':['|相关链接', '<br>Related Links'],
-                          }
+        self.title_dic = {
+            'character':['|角色', '<br>Characters'], 
+            'clock':['|时钟', '<br>Clock'], 
+            'music':['|音乐', '<br>Music'],
+            'operate':['|基础操作', '<br>Basic Operation'], 
+            'update':['|更新日志', '<br>Update Log'], 
+            'link':['|相关链接', '<br>Related Links'],
+            }
         
         self.title_1 = QLabel(self.title_dic['character'][0])
         self.title_1.setStyleSheet("""
@@ -1072,7 +1073,7 @@ class Individuation(QWidget):
             measured_document.setTextWidth(card_width - 2 * update.frameWidth())
             height = max(
                 update.minimumSizeHint().height(),
-                ceil(measured_document.size().height()) + 14 * update.frameWidth(),
+                ceil(measured_document.size().height()) + 16 * update.frameWidth(),
             )
 
             v_block, v_layout = self.page_set(640, height, color, (0, 0, 0, 0), (0, 0, 0, 0))
