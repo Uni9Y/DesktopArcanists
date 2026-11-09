@@ -219,11 +219,9 @@ class CD_show(QWidget):
             )
         self.label_music = RotatingImageLabel(self.pixmap_music)
 
-        # 扫描歌曲列表
-        self.song_lst = self.scan_songs()
-        if len(self.song_lst) > 0 :
-            self.current_song = self.song_lst[0]
-            self.current_song_index = self.song_lst.index(self.current_song)
+        self.on_playing = False
+        self.current_song = None
+        self.current_song_index = 0
         
         # 歌曲表单键
         self.list_song = DoubleClickButton(chr(0xE700))
@@ -404,9 +402,6 @@ class CD_show(QWidget):
 
         # 接续播放
         self.song_sound.mediaStatusChanged.connect(self.on_status_changed)
-
-        # 随机播放位数列表，用-1占位
-        self.random_lst = [None for time in range(len(self.song_lst)//2)]
         
         # 读取歌曲信息
         self.song_sound.metaDataChanged.connect(self.update_song_metadata)
@@ -431,7 +426,23 @@ class CD_show(QWidget):
         if status == QMediaPlayer.MediaStatus.EndOfMedia:
             self.next_play()
 
+    def song_scanning(self):
+        if not self.on_playing:
+            # 扫描歌曲列表
+            self.song_lst = self.scan_songs()
+            if len(self.song_lst) > 0 :
+                self.current_song = self.song_lst[0]
+                self.current_song_index = self.song_lst.index(self.current_song)
+            else :
+                self.current_song = None
+                self.current_song_index = 0
+            self.on_playing = True
+        # 随机播放位数列表，用None占位
+        self.random_lst = [None for time in range(len(self.song_lst)//2)]
+
     def last_play(self):
+        self.song_scanning()
+
         if not self.song_lst:
             return
         if self.song_play_order == 0 :
@@ -488,6 +499,8 @@ class CD_show(QWidget):
         self.volume_disappear.start()
 
     def next_play(self):
+        self.song_scanning()
+
         if not self.song_lst:
             return
         if self.song_play_order == 0 :
@@ -522,6 +535,8 @@ class CD_show(QWidget):
         self.label_music.update()
 
     def pause_start(self):
+        self.song_scanning()
+
         if not self.song_lst:
             self.hint.show()
             self.hint.start_pos = self.pos() + QPoint((self.width() // 4) + 10, (self.height() // 3) + 10)
@@ -624,18 +639,27 @@ class CD_show(QWidget):
             self.label_music.clear_cover_image()
 
     def refresh_songs(self):
-        last_len = len(self.song_lst)
-        self.song_lst = self.scan_songs()
-        now_len = len(self.song_lst)
-        dis_len = now_len - last_len
-        if dis_len >= 0 :
-            for time in range(dis_len):
-                self.random_lst.append(None)
-        elif dis_len < 0 :
-            for time in range(-dis_len):
-                self.random_lst.remove(self.random_lst[0])
-        self.current_song_index = self.song_lst.index(self.current_song)
+        if not self.on_playing:
+            return
 
+        self.song_lst = self.scan_songs()
+
+        self.random_lst = [
+            song for song in self.random_lst
+            if song is None or song in self.song_lst
+        ]
+        history_len = len(self.song_lst) // 2
+        if history_len:
+            self.random_lst = (
+                [None] * max(0, history_len - len(self.random_lst))
+                + self.random_lst[-history_len:]
+            )
+        else:
+            self.random_lst = []
+
+        if self.current_song is None and self.song_lst:
+            self.current_song = self.song_lst[0]
+            self.current_song_index = 0
 
 if __name__ == "__main__" :
     app = QApplication(sys.argv)
