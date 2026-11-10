@@ -4,6 +4,19 @@ from PyQt6.QtGui import QPixmap, QPainter, QColor, QMovie, QImageReader, QPalett
 from math import ceil
 import sys
 import os
+import json
+import logging
+import re
+from PyQt6.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkRequest
+
+APP_VERSION = "1.0.1" #当前版本
+GITHUB_OWNER = "Uni9Y"
+GITHUB_REPO = "DesktopArcanists"
+
+LATEST_RELEASE_API = (
+    f"https://api.github.com/repos/{GITHUB_OWNER}/{GITHUB_REPO}/releases/latest"
+)
+RELEASES_PAGE = f"https://github.com/{GITHUB_OWNER}/{GITHUB_REPO}/releases/latest"
 
 # 资源路径统一处理：兼容打包后的程序目录结构。
 def resource_path(path):
@@ -319,12 +332,13 @@ class Individuation(QWidget):
             | Qt.WindowType.Tool
         )
 
-        self.wholelayout = QHBoxLayout(self)
+        self.finallayout = QVBoxLayout()
+        self.wholelayout = QHBoxLayout()
         
-        self.sidebar = QVBoxLayout(self)
+        self.sidebar = QVBoxLayout()
         self.sidebar.setContentsMargins(0, 0, 0, 0)
 
-        self.mainlayout = QVBoxLayout(self)
+        self.mainlayout = QVBoxLayout()
         title_bar = QHBoxLayout()
 
         title_bar.addStretch()
@@ -501,7 +515,37 @@ class Individuation(QWidget):
         self.Title_selected()
         self.wholelayout.addLayout(self.sidebar)
         self.wholelayout.addLayout(self.mainlayout)
-        self.setLayout(self.wholelayout)
+
+        # 版本更新检测
+        self.update_link = QPushButton(f"当前版本v{APP_VERSION}，已是最新版本")
+        self.update_link.setStyleSheet("""
+            QPushButton {
+                color: #a8a8a8;
+                background: transparent;
+                border: none;
+            }
+        """)
+        self.update_available = False
+        self.update_link.clicked.connect(self.open_update_page)
+
+        self.finallayout.addLayout(self.wholelayout)
+        self.finallayout.addWidget(
+            self.update_link,
+            alignment=Qt.AlignmentFlag.AlignCenter,
+        )
+
+        self.setLayout(self.finallayout)
+
+        # 版本检查
+        self.network = QNetworkAccessManager(self)
+        self._update_reply = None
+
+        self.update_timer = QTimer(self)
+        self.update_timer.setInterval(6 * 60 * 60 * 1000) # 每 6 小时检查一次
+        self.update_timer.timeout.connect(self.check_latest_release)
+
+        self.check_latest_release() # 启动时检查
+        self.update_timer.start()
 
         # 统一按键样式        
         self.cha_btns = []
@@ -551,6 +595,83 @@ class Individuation(QWidget):
         self.pressing = False
 
         self.top_at_pos = False
+
+    # 版本更新检查方法
+    def check_latest_release(self):
+        # 防止上一次请求尚未完成时重复发送请求
+        if self._update_reply is not None:
+            return
+
+        request = QNetworkRequest(QUrl(LATEST_RELEASE_API))
+        request.setRawHeader(b"Accept", b"application/vnd.github+json")
+        request.setRawHeader(b"User-Agent", b"MyPyQtApp")
+
+        self._update_reply = self.network.get(request)
+        self._update_reply.finished.connect(self.handle_latest_release)
+
+    def handle_latest_release(self):
+        reply = self._update_reply
+        self._update_reply = None
+
+        if reply is None:
+            return
+
+        try:
+            if reply.error() != QNetworkReply.NetworkError.NoError:
+                logging.warning("检查Github更新失败： %s", reply.errorString())
+
+            try:
+                release = json.loads(bytes(reply.readAll()).decode("utf-8"))
+            except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+                logging.warning("无法解析Github Release响应：%s", exc)
+
+            tag = release.get("tag_name") if isinstance(release, dict) else None
+            if not isinstance(tag, str):
+                logging.warning("Github Release响应中没有有效的tag_name")
+                return
+
+            current_version = self.parse_version(APP_VERSION)
+            latest_version = self.parse_version(tag)
+
+            if current_version is None or latest_version is None:
+                logging.warning("版本号格式错误")
+                return
+
+            if latest_version > current_version:
+                self.update_available =True
+                self.update_link.setText(f"发现新版本{tag}，点这里去更新")
+                self.update_link.setStyleSheet("""
+                    QPushButton {
+                        color: #008be8;
+                        background: transparent;
+                        border: none;
+                    }
+                """)
+            else:
+                self.update_available = False
+                self.update_link.setText(f"当前版本v{APP_VERSION}，已是最新版本")
+                self.update_link.setStyleSheet("""
+                    QPushButton {
+                        color: #a8a8a8;
+                        background: transparent;
+                        border: none;
+                    }
+                """)
+
+        finally:
+            reply.deleteLater()
+
+    @staticmethod
+    def parse_version(version):
+        match = re.fullmatch(r"v?(\d+)\.(\d+)\.(\d+)", version.strip())
+        if not match:
+            return None
+
+        return tuple(int(part) for part in match.groups())
+
+    def open_update_page(self):
+        if self.update_available:
+            QDesktopServices.openUrl(QUrl(RELEASES_PAGE))
 
     # 窗口顶端判定
     def mousePos(self, event: QMouseEvent):
@@ -1222,6 +1343,7 @@ class Individuation(QWidget):
         source_path.setStyleSheet("""
             QPushButton {
                 color: "#0080ff";
+                border: none;
                 background: transparent;
                 font-size: 20px;
                 font-family: "KaiTi";
