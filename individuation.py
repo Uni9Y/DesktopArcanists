@@ -9,7 +9,7 @@ import logging
 import re
 from PyQt6.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkRequest
 
-APP_VERSION = "1.0.1" #当前版本
+APP_VERSION = "1.0.2" #当前版本
 GITHUB_OWNER = "Uni9Y"
 GITHUB_REPO = "DesktopArcanists"
 
