@@ -517,7 +517,7 @@ class Individuation(QWidget):
         self.wholelayout.addLayout(self.mainlayout)
 
         # 版本更新检测
-        self.update_link = QPushButton(f"当前版本v{APP_VERSION}，已是最新版本")
+        self.update_link = QPushButton("正在检查更新...")
         self.update_link.setStyleSheet("""
             QPushButton {
                 color: #a8a8a8;
@@ -619,15 +619,36 @@ class Individuation(QWidget):
         try:
             if reply.error() != QNetworkReply.NetworkError.NoError:
                 logging.warning("检查Github更新失败： %s", reply.errorString())
+                if not self.update_available:
+                    self.end_line('error')
+                return
+
+            body = bytes(reply.readAll())
 
             try:
-                release = json.loads(bytes(reply.readAll()).decode("utf-8"))
+                release = json.loads(body.decode("utf-8"))
             except (UnicodeDecodeError, json.JSONDecodeError) as exc:
                 logging.warning("无法解析Github Release响应：%s", exc)
+                if not self.update_available:
+                    self.end_line('error')
+                return
+
+            if not isinstance(release, dict):
+                body_preview = body[:500].decode("utf-8", errors="replace")
+                logging.warning(
+                    "Github响应JSON顶层不是字典：type=%s，内容=%r",
+                    type(release).__name__,
+                    body_preview,
+                )
+                if not self.update_available:
+                    self.end_line('error')
+                return
 
             tag = release.get("tag_name") if isinstance(release, dict) else None
             if not isinstance(tag, str):
                 logging.warning("Github Release响应中没有有效的tag_name")
+                if not self.update_available:
+                    self.end_line('error')
                 return
 
             current_version = self.parse_version(APP_VERSION)
@@ -635,31 +656,34 @@ class Individuation(QWidget):
 
             if current_version is None or latest_version is None:
                 logging.warning("版本号格式错误")
+                if not self.update_available:
+                    self.end_line('error')
                 return
 
             if latest_version > current_version:
                 self.update_available =True
-                self.update_link.setText(f"发现新版本{tag}，点这里去更新")
-                self.update_link.setStyleSheet("""
-                    QPushButton {
-                        color: #008be8;
-                        background: transparent;
-                        border: none;
-                    }
-                """)
+                self.end_line('new', tag)
             else:
                 self.update_available = False
-                self.update_link.setText(f"当前版本v{APP_VERSION}，已是最新版本")
-                self.update_link.setStyleSheet("""
-                    QPushButton {
-                        color: #a8a8a8;
-                        background: transparent;
-                        border: none;
-                    }
-                """)
+                self.end_line('none')
 
         finally:
             reply.deleteLater()
+
+    def end_line(self, value, tag = ''):
+        update_dic = {
+            'new': [f"发现新版本{tag}，点这里去更新", '#008be8'],
+            'none': [f"当前版本v{APP_VERSION}，已是最新版本", '#a8a8a8'],
+            'error': [f"暂时无法检查更新", '#ff0000']
+            }
+        self.update_link.setText(update_dic[value][0])
+        self.update_link.setStyleSheet("""
+            QPushButton {{
+                color: {color};
+                background: transparent;
+                border: none;
+            }}
+        """.format(color = update_dic[value][1]))
 
     @staticmethod
     def parse_version(version):
