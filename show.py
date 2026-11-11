@@ -562,7 +562,14 @@ class InteractiveGif(QWidget):
         )
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.resize(500,300)
-        self.move(1300,700)
+        screen = QApplication.primaryScreen()
+        if screen is None:
+            raise RuntimeError(" 未检测到可用屏幕")
+        area = screen.availableGeometry()
+        margin = 20
+        x = area.x() + max(0, area.width() - self.width() + 100 - margin)
+        y = area.y() + max(0, area.height() - self.height() - margin)
+        self.move(x, y)
 
         # 拖动相关状态
         self.drag_start_pos = QPoint()
