@@ -282,6 +282,7 @@ class Chatting(QWidget):
             pos + QPoint(dx, 0) for pos in self.disapp_temp
         ]
         self.appear = self.appear_temp[self.lst_1st:self.lst_6rd]
+        self.disapp = self.disapp_temp[self.lst_1st:self.lst_6rd]
 
         if self.btn_ani_start == 0:
             for btn, pos in zip(self.btn_lst, self.appear):
