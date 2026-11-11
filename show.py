@@ -219,7 +219,8 @@ class Chatting(QWidget):
         self.chat_time_hide.timeout.connect(self.hide_animated)
 
         addition = 0
-        
+        self.dx = 10
+
         for chat in self.btn_all_lst:
             chat.setFixedSize(180,28)
             effect = QGraphicsOpacityEffect(chat)
@@ -253,7 +254,7 @@ class Chatting(QWidget):
 
             main_layout.addWidget(chat)
 
-            self.appear_pos = chat.pos() + QPoint(10, int(addition))
+            self.appear_pos = chat.pos() + QPoint(self.dx, int(addition))
             self.disapp_pos = chat.pos() + QPoint(0, int(addition))
 
             chat.move(self.appear_pos)
@@ -271,6 +272,20 @@ class Chatting(QWidget):
         self.setLayout(main_layout)
         self.setFixedSize(200,260)
         self.move(300,200)
+
+    def set_slide_direction(self, dx):
+        if self.dx == dx:
+            return
+
+        self.dx = dx
+        self.appear_temp = [
+            pos + QPoint(dx, 0) for pos in self.disapp_temp
+        ]
+        self.appear = self.appear_temp[self.lst_1st:self.lst_6rd]
+
+        if self.btn_ani_start == 0:
+            for btn, pos in zip(self.btn_lst, self.appear):
+                btn.move(pos)
 
     def come_in_ani(self, index):
         
@@ -564,7 +579,7 @@ class InteractiveGif(QWidget):
         self.resize(500,300)
         screen = QApplication.primaryScreen()
         if screen is None:
-            raise RuntimeError(" 未检测到可用屏幕")
+            raise RuntimeError("未检测到可用屏幕")
         area = screen.availableGeometry()
         margin = 20
         x = area.x() + max(0, area.width() - self.width() + 100 - margin)
@@ -1219,6 +1234,28 @@ class InteractiveGif(QWidget):
         return self.pixmap_2.rect().contains(mouse_pos)
 
     def moveEvent(self, event):
+        screen = QApplication.screenAt(self.frameGeometry().center())
+        if screen is None:
+            screen = QApplication.primaryScreen()
+        if screen is None:
+            return
+
+        area = screen.availableGeometry()
+        gap = 12
+
+        right_x = self.x() + self.width() * 2 // 3 - gap
+        left_x = self.x() + gap
+
+        if self.frameGeometry().center().x() < 100:
+            x = right_x if right_x + self.chatbox.width() <= area.x() + area.width() else left_x
+        else:
+            x = left_x if left_x >= area.x() else right_x
+
+        chatbox_is_right = x == right_x
+        self.chatbox.set_slide_direction(-10 if chatbox_is_right else 10)
+
+        self.chatbox.move(x, self.y())
+
         # 主窗口移动时，让两个技能图片窗口保持相对位置
         super().moveEvent(event)
         if hasattr(self, 'pixmap_1'):
@@ -1226,8 +1263,6 @@ class InteractiveGif(QWidget):
         if hasattr(self, 'pixmap_2'):
             self.pixmap_2.move(self.pos() + self.skill_2_offset)
         self.chat_wait.move(self.pos() + QPoint(280, 0))
-
-        self.chatbox.move(self.pos())
 
         self.pixmap_1.current_pos = self.pixmap_1.pos()
         self.pixmap_1.move_to_pos = self.pixmap_1.pos() - QPoint(2,8)

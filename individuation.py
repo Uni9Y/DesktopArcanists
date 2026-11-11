@@ -9,7 +9,7 @@ import logging
 import re
 from PyQt6.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkRequest
 
-APP_VERSION = "1.0.2" #当前版本
+APP_VERSION = "1.0.3" #当前版本
 GITHUB_OWNER = "Uni9Y"
 GITHUB_REPO = "DesktopArcanists"
 
@@ -526,6 +526,7 @@ class Individuation(QWidget):
             }
         """)
         self.update_available = False
+        self.update_checkable = True
         self.update_link.clicked.connect(self.open_update_page)
 
         self.finallayout.addLayout(self.wholelayout)
@@ -661,7 +662,7 @@ class Individuation(QWidget):
                 return
 
             if latest_version > current_version:
-                self.update_available =True
+                self.update_available = True
                 self.end_line('new', tag)
             else:
                 self.update_available = False
@@ -674,7 +675,7 @@ class Individuation(QWidget):
         update_dic = {
             'new': [f"发现新版本{tag}，点这里去更新", '#008be8'],
             'none': [f"当前版本v{APP_VERSION}，已是最新版本", '#a8a8a8'],
-            'error': [f"暂时无法检查更新", '#ff0000']
+            'error': [f"暂时无法检查更新，请检查网络设置", '#ff0000']
             }
         self.update_link.setText(update_dic[value][0])
         self.update_link.setStyleSheet("""
@@ -684,6 +685,8 @@ class Individuation(QWidget):
                 border: none;
             }}
         """.format(color = update_dic[value][1]))
+
+        self.update_checkable = value == 'new'
 
     @staticmethod
     def parse_version(version):
@@ -696,6 +699,18 @@ class Individuation(QWidget):
     def open_update_page(self):
         if self.update_available:
             QDesktopServices.openUrl(QUrl(RELEASES_PAGE))
+        elif not self.update_checkable:
+            self.update_link.setText("正在检查更新...")
+            self.update_link.setStyleSheet("""
+                QPushButton {
+                    color: #a8a8a8;
+                    background: transparent;
+                    border: none;
+                }
+            """)
+            self.update_available = False
+            self.update_checkable = True
+            self.check_latest_release()
 
     # 窗口顶端判定
     def mousePos(self, event: QMouseEvent):
@@ -1218,7 +1233,7 @@ class Individuation(QWidget):
             measured_document.setTextWidth(card_width - 2 * update.frameWidth())
             height = max(
                 update.minimumSizeHint().height(),
-                ceil(measured_document.size().height()) + 16 * update.frameWidth(),
+                ceil(measured_document.size().height()) + 18 * update.frameWidth(),
             )
 
             v_block, v_layout = self.page_set(640, height, color, (0, 0, 0, 0), (0, 0, 0, 0))
