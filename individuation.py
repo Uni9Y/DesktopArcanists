@@ -423,7 +423,7 @@ class Individuation(QWidget):
                 colume.setStyleSheet("""
                 QPushButton {
                     background: transparent;
-                    border: transparent;
+                    border: none;
                     padding: 1 1 1 1px;
                     text-align: left;
                     font-family: "KaiTi";
@@ -435,7 +435,7 @@ class Individuation(QWidget):
                 colume.setStyleSheet("""
                     QPushButton {
                         background: transparent;
-                        border: transparent;
+                        border: none;
                         padding: 1 1 1 1px;
                         text-align: left;
                         font-family: "KaiTi";
