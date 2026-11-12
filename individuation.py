@@ -1,5 +1,5 @@
 from PyQt6.QtCore import QTimer, QPoint, QPropertyAnimation, QEasingCurve, Qt, pyqtProperty, QRectF, QSize, QRect, QRegularExpression, QUrl
-from PyQt6.QtWidgets import QApplication, QWidget, QPushButton, QVBoxLayout, QHBoxLayout, QLabel, QGraphicsScale, QGraphicsDropShadowEffect, QGraphicsOpacityEffect, QComboBox, QFrame, QListView, QPlainTextEdit, QTextEdit
+from PyQt6.QtWidgets import QApplication, QWidget, QPushButton, QVBoxLayout, QHBoxLayout, QLabel, QGraphicsScale, QGraphicsDropShadowEffect, QGraphicsOpacityEffect, QComboBox, QFrame, QListView, QPlainTextEdit, QTextEdit, QScrollArea
 from PyQt6.QtGui import QPixmap, QPainter, QColor, QMovie, QImageReader, QPalette, QTextDocument, QTextCursor, QTextCharFormat, QFont, QTextBlockFormat, QPainterPath, QDesktopServices, QMouseEvent
 from math import ceil
 import sys
@@ -9,7 +9,7 @@ import logging
 import re
 from PyQt6.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkRequest
 
-APP_VERSION = "1.0.3" #当前版本
+APP_VERSION = "1.0.4" #当前版本
 GITHUB_OWNER = "Uni9Y"
 GITHUB_REPO = "DesktopArcanists"
 
@@ -1205,6 +1205,20 @@ class Individuation(QWidget):
         color = 'rgba(102, 51, 0, 15)'
         page, update_layout = self.page_set(672, 490, 'transparent', (15, 0, 18, 20), (0, 0, 0, 0), False)
         update_layout.setSpacing(0)
+        update_layout.setContentsMargins(0, 0, 0, 0)
+
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setFrameShape(QFrame.Shape.NoFrame)
+        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+
+        content_widget = QWidget()
+        content_layout = QVBoxLayout(content_widget)
+        content_layout.setContentsMargins(0, 0, 0, 0)
+        content_layout.setSpacing(0)
+        scroll_area.setWidget(content_widget)
+        update_layout.addWidget(scroll_area)
+
         with open(resource_txt('update_log.txt'), 'r', encoding='utf-8') as f:
             whole_content = f.read()
         content_lst = [text.removeprefix("\n") for text in whole_content.split('§')]
@@ -1239,7 +1253,7 @@ class Individuation(QWidget):
             v_block, v_layout = self.page_set(640, height, color, (0, 0, 0, 0), (0, 0, 0, 0))
 
             v_layout.addWidget(update, 1)
-            update_layout.addWidget(
+            content_layout.addWidget(
                 v_block,
                 alignment = Qt.AlignmentFlag.AlignTop |
                     Qt.AlignmentFlag.AlignCenter
@@ -1253,12 +1267,13 @@ class Individuation(QWidget):
                 }
             """)
 
-        update_layout.addWidget(
+        content_layout.addWidget(
             end_line,
             alignment = Qt.AlignmentFlag.AlignTop |
                 Qt.AlignmentFlag.AlignCenter
             )
-        update_layout.addStretch()
+
+        content_layout.addSpacing(50)
 
         return page
     

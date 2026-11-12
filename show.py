@@ -173,23 +173,23 @@ class Chatting(QWidget):
         )
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
 
-        main_layout = QVBoxLayout()
+        self.setFixedSize(200,260)
 
         # 语音条目
-        self.chat_btn_1 = QPushButton('问候')
-        self.chat_btn_2 = QPushButton('帽檐与发鬓')
-        self.chat_btn_3 = QPushButton('袖与手')
-        self.chat_btn_4 = QPushButton('衣着与身形')
-        self.chat_btn_5 = QPushButton('嗜好')
-        self.chat_btn_6 = QPushButton('赞赏')
-        self.chat_btn_7 = QPushButton('初遇')
-        self.chat_btn_8 = QPushButton('气候')
-        self.chat_btn_9 = QPushButton('未来')
-        self.chat_btn_10 = QPushButton('亲昵')
-        self.chat_btn_11 = QPushButton('闲谈')
-        self.chat_btn_12 = QPushButton('独白')
-        self.chat_btn_13 = QPushButton('洞悉')
-        self.chat_btn_14 = QPushButton('洞悉之底')
+        self.chat_btn_1 = QPushButton('问候', self)
+        self.chat_btn_2 = QPushButton('帽檐与发鬓', self)
+        self.chat_btn_3 = QPushButton('袖与手', self)
+        self.chat_btn_4 = QPushButton('衣着与身形', self)
+        self.chat_btn_5 = QPushButton('嗜好', self)
+        self.chat_btn_6 = QPushButton('赞赏', self)
+        self.chat_btn_7 = QPushButton('初遇', self)
+        self.chat_btn_8 = QPushButton('气候', self)
+        self.chat_btn_9 = QPushButton('未来', self)
+        self.chat_btn_10 = QPushButton('亲昵', self)
+        self.chat_btn_11 = QPushButton('闲谈', self)
+        self.chat_btn_12 = QPushButton('独白', self)
+        self.chat_btn_13 = QPushButton('洞悉', self)
+        self.chat_btn_14 = QPushButton('洞悉之底', self)
         self.lst_1st = 0
         self.lst_6rd = 7
         
@@ -205,9 +205,6 @@ class Chatting(QWidget):
         self.out_animations_temp = []
         self.appear_animations_temp = []
         self.disapp_animations_temp = []
-        self.appear_temp = []
-        self.disapp_temp = []
-
         self.btn_ani_start = 0
 
         self.chat_time_show = QTimer(self)
@@ -218,11 +215,29 @@ class Chatting(QWidget):
         self.chat_time_hide.setInterval(50)
         self.chat_time_hide.timeout.connect(self.hide_animated)
 
-        addition = 0
-        self.dx = 10
+        # 检测按钮动画是否全部播放完毕
+        self.move_over = False
+        self._move_over_ignored_animations = set()
 
-        for chat in self.btn_all_lst:
-            chat.setFixedSize(180,28)
+        self.dx = 10
+        button_width = 180
+        button_height = 28
+        button_spacing = 7
+        button_top = (
+            self.height()
+            - (self.lst_6rd * button_height + (self.lst_6rd - 1) * button_spacing)
+        ) // 2
+        self.disapp = [
+            QPoint(
+                (self.width() - button_width) // 2,
+                button_top + index * (button_height + button_spacing),
+            )
+            for index in range(self.lst_6rd)
+        ]
+        self.appear = [pos + QPoint(self.dx, 0) for pos in self.disapp]
+
+        for index, chat in enumerate(self.btn_all_lst):
+            chat.setFixedSize(button_width, button_height)
             effect = QGraphicsOpacityEffect(chat)
             effect.setOpacity(0.0)
             chat.setGraphicsEffect(effect)
@@ -252,43 +267,44 @@ class Chatting(QWidget):
             disapp_ani.setEasingCurve(QEasingCurve.Type.InCubic)
             self.disapp_animations_temp.append(disapp_ani)
 
-            main_layout.addWidget(chat)
-
-            self.appear_pos = chat.pos() + QPoint(self.dx, int(addition))
-            self.disapp_pos = chat.pos() + QPoint(0, int(addition))
-
-            chat.move(self.appear_pos)
-
-            addition += 35
-
-            self.appear_temp.append(self.appear_pos)
-            self.disapp_temp.append(self.disapp_pos)
+            chat.move(self.appear[index % len(self.appear)])
         
-        self.appear = self.appear_temp[int(self.lst_1st):int(self.lst_6rd)]
-        self.disapp = self.disapp_temp[int(self.lst_1st):int(self.lst_6rd)]
-
         self.lst_load()
 
-        self.setLayout(main_layout)
-        self.setFixedSize(200,260)
-        self.move(300,200)
+        for index, animation in enumerate(self.appear_animations_temp):
+            animation.finished.connect(
+                lambda i=index, a=animation: self._on_btn_move_finished(i, 'in', a)
+            )
+
+        for index, animation in enumerate(self.disapp_animations_temp):
+            animation.finished.connect(
+                lambda i=index, a=animation: self._on_btn_move_finished(i, 'out', a)
+            )
+
+    def _on_btn_move_finished(self, index, direction, animation):
+        if animation in self._move_over_ignored_animations:
+            self._move_over_ignored_animations.remove(animation)
+            return
+
+        if direction == 'in':
+            if index == self.lst_6rd - 1:
+                self.move_over = True
+            else:
+                self.move_over = False
+        elif direction == 'out':
+            self.move_over = False
 
     def set_slide_direction(self, dx):
         if self.dx == dx:
             return
 
         self.dx = dx
-        self.appear_temp = [
-            pos + QPoint(dx, 0) for pos in self.disapp_temp
-        ]
-        self.appear = self.appear_temp[self.lst_1st:self.lst_6rd]
-        self.disapp = self.disapp_temp[self.lst_1st:self.lst_6rd]
+        self.appear = [pos + QPoint(dx, 0) for pos in self.disapp]
 
-        if self.btn_ani_start == 0:
-            for btn, pos in zip(self.btn_lst, self.appear):
-                btn.move(pos)
+        for btn, pos in zip(self.btn_lst, self.appear):
+            btn.move(pos)
 
-    def come_in_ani(self, index):
+    def come_in_ani(self, index, update_move_over=True):
         
         self.out_animations[index].stop()
         self.disapp_animations[index].stop()
@@ -296,10 +312,15 @@ class Chatting(QWidget):
         self.in_animations[index].setStartValue(self.button_effects[index].opacity())
         self.in_animations[index].start()
 
-        self.appear_animations[index].setEndValue(self.disapp[index])
-        self.appear_animations[index].start()
+        animation = self.appear_animations[index]
+        self._move_over_ignored_animations.discard(animation)
+        if not update_move_over:
+            self._move_over_ignored_animations.add(animation)
+        animation.setStartValue(self.appear[index])
+        animation.setEndValue(self.disapp[index])
+        animation.start()
 
-    def come_out_ani(self, index):
+    def come_out_ani(self, index, update_move_over=True):
 
         self.in_animations[index].stop()
         self.appear_animations[index].stop()
@@ -307,8 +328,12 @@ class Chatting(QWidget):
         self.out_animations[index].setStartValue(self.button_effects[index].opacity())
         self.out_animations[index].start()
 
-        self.disapp_animations[index].setEndValue(self.appear[index])
-        self.disapp_animations[index].start()
+        animation = self.disapp_animations[index]
+        self._move_over_ignored_animations.discard(animation)
+        if not update_move_over:
+            self._move_over_ignored_animations.add(animation)
+        animation.setEndValue(self.appear[index])
+        animation.start()
 
     def lst_load(self):
         self.btn_lst = self.btn_all_lst[int(self.lst_1st):int(self.lst_6rd)]
@@ -318,8 +343,11 @@ class Chatting(QWidget):
         self.disapp_animations = self.disapp_animations_temp[int(self.lst_1st):int(self.lst_6rd)]
         self.button_effects = self.button_effects_temp[int(self.lst_1st):int(self.lst_6rd)]
 
-    def scroll_mov(self):
-        for btn, pos in zip(self.btn_lst, self.disapp) :
+    def scroll_mov(self, entering_index):
+        for index, (btn, pos) in enumerate(zip(self.btn_lst, self.disapp)):
+            if index == entering_index:
+                continue
+
             btn.scroll_to = QPropertyAnimation(btn, b'pos', btn)
             btn.scroll_to.setDuration(180)
             btn.scroll_to.setEasingCurve(QEasingCurve.Type.OutCubic)
@@ -356,26 +384,29 @@ class Chatting(QWidget):
     def wheelEvent(self, event: QWheelEvent):
         delta_y = event.angleDelta().y()
 
+        if not self.move_over:
+            return
+
         if delta_y > 0 :
             if self.lst_1st <= 0 :
                 return
             
             self.lst_1st -= 1
             self.lst_6rd -= 1
-            self.come_out_ani(len(self.btn_lst)-1)
+            self.come_out_ani(len(self.btn_lst)-1, update_move_over=False)
             self.lst_load()
-            self.come_in_ani(0)
-            self.scroll_mov()
+            self.come_in_ani(0, update_move_over=False)
+            self.scroll_mov(0)
         elif delta_y < 0 :
             if self.lst_6rd >= len(self.btn_all_lst) :
                 return
 
             self.lst_1st += 1
             self.lst_6rd += 1
-            self.come_out_ani(0)
+            self.come_out_ani(0, update_move_over=False)
             self.lst_load()
-            self.come_in_ani(len(self.btn_lst)-1)
-            self.scroll_mov()
+            self.come_in_ani(len(self.btn_lst)-1, update_move_over=False)
+            self.scroll_mov(len(self.btn_lst)-1)
 
 class Skill(QWidget):
     # 技能图片窗口：负责显示图片以及图片的缩放、移动动画
@@ -1144,16 +1175,16 @@ class InteractiveGif(QWidget):
         self.chatbox_timer.start()
     
     def eventFilter(self, watched, event):
-            if event.type() == QEvent.Type.Wheel and isinstance(watched, QWidget):
-                if watched.window() is self.small_app:
-                    delta_y = event.angleDelta().y()
-                    if delta_y < 0:
-                        self.switch_small_app(1)
-                    elif delta_y > 0:
-                        self.switch_small_app(-1)
-                    return True
-    
-            return super().eventFilter(watched, event)
+        if event.type() == QEvent.Type.Wheel and isinstance(watched, QWidget):
+            if watched.window() is self.small_app:
+                delta_y = event.angleDelta().y()
+                if delta_y < 0:
+                    self.switch_small_app(1)
+                elif delta_y > 0:
+                    self.switch_small_app(-1)
+                return True
+
+        return super().eventFilter(watched, event)
 
     def font_change_color(self, color):
         self.color_font = self.color_dic[color]
@@ -1246,6 +1277,7 @@ class InteractiveGif(QWidget):
 
         right_x = self.x() + self.width() * 2 // 3 - gap
         left_x = self.x() + gap
+        self.chatbox.move_over = False
 
         if self.frameGeometry().center().x() < 100:
             x = right_x if right_x + self.chatbox.width() <= area.x() + area.width() else left_x
